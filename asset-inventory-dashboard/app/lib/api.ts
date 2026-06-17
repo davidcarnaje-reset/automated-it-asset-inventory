@@ -243,33 +243,27 @@ export function getMockComputers(): Computer[] {
  * Falls back to high-fidelity mock data if the API is offline.
  */
 export async function fetchComputers(): Promise<{ computers: Computer[]; isMock: boolean }> {
-  const endpoints = [
-    'http://localhost:5067/api/computers',
-    'http://localhost:5067/api/inventory',
-  ];
+  const url = 'http://localhost:5067/api/inventory';
 
-  for (const url of endpoints) {
-    try {
-      // Set a short timeout of 2 seconds so page loads do not hang if backend is down
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-      const res = await fetch(url, { 
-        cache: 'no-store',
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
+    const res = await fetch(url, { 
+      cache: 'no-store',
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
 
-      if (res.ok) {
-        const data = await res.json();
-        const list = Array.isArray(data) ? data : (data.items || data.data || []);
-        if (Array.isArray(list) && list.length > 0) {
-          return { computers: list.map(normalizeComputer), isMock: false };
-        }
+    if (res.ok) {
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : (data.items || data.data || []);
+      if (Array.isArray(list) && list.length > 0) {
+        return { computers: list.map(normalizeComputer), isMock: false };
       }
-    } catch (e) {
-      console.warn(`Failed to fetch from endpoint ${url}:`, e);
     }
+  } catch (e) {
+    console.warn(`Failed to fetch from endpoint ${url}:`, e);
   }
 
   // Fallback to mock data
@@ -280,31 +274,26 @@ export async function fetchComputers(): Promise<{ computers: Computer[]; isMock:
  * Checks backend API for a specific computer, falling back to mock details.
  */
 export async function fetchComputerById(id: string): Promise<{ computer: Computer | null; isMock: boolean }> {
-  const endpoints = [
-    `http://localhost:5067/api/computers/${id}`,
-    `http://localhost:5067/api/inventory/${id}`,
-  ];
+  const url = `http://localhost:5067/api/inventory/${id}`;
 
-  for (const url of endpoints) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-      const res = await fetch(url, { 
-        cache: 'no-store',
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
+    const res = await fetch(url, { 
+      cache: 'no-store',
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data) {
-          return { computer: normalizeComputer(data), isMock: false };
-        }
+    if (res.ok) {
+      const data = await res.json();
+      if (data) {
+        return { computer: normalizeComputer(data), isMock: false };
       }
-    } catch (e) {
-      console.warn(`Failed to fetch details from endpoint ${url}:`, e);
     }
+  } catch (e) {
+    console.warn(`Failed to fetch details from endpoint ${url}:`, e);
   }
 
   // Fallback to mock data

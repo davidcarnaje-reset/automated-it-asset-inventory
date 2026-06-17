@@ -11,41 +11,47 @@ interface DeviceDetailClientProps {
 export default function DeviceDetailClient({ id }: DeviceDetailClientProps) {
   const [computer, setComputer] = useState<Computer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
 
     async function loadDetail() {
-      const endpoints = [
-        `http://localhost:5067/api/computers/${id}`,
-        `http://localhost:5067/api/inventory/${id}`,
-      ];
+      const url = `http://localhost:5067/api/inventory/${id}`;
 
-      for (const url of endpoints) {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 2000);
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-          const res = await fetch(url, { signal: controller.signal });
-          clearTimeout(timeoutId);
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
 
-          if (res.ok) {
-            const data = await res.json();
-            if (data && active) {
-              setComputer(normalizeComputer(data));
-              setIsLoading(false);
-              return;
-            }
+        if (res.ok) {
+          const data = await res.json();
+          if (data && active) {
+            setComputer(normalizeComputer(data));
+            setError(null);
+            setIsLoading(false);
+            return;
           }
-        } catch (e) {
-          console.warn(`Failed to connect to ${url}:`, e);
+        } else {
+          if (res.status === 404) {
+            if (active) {
+              setComputer(null);
+              setError(null);
+              setIsLoading(false);
+            }
+            return;
+          }
+          throw new Error(`HTTP error ${res.status}`);
         }
-      }
-
-      // Set computer to null if details fetch fails
-      if (active) {
-        setComputer(null);
-        setIsLoading(false);
+      } catch (e) {
+        console.warn(`Failed to connect to ${url}:`, e);
+        if (active) {
+          setComputer(null);
+          setError("Could not reach database server");
+          setIsLoading(false);
+        }
       }
     }
 
@@ -78,6 +84,56 @@ export default function DeviceDetailClient({ id }: DeviceDetailClientProps) {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div className="h-96 bg-slate-900/20 rounded-2xl border border-slate-900/80"></div>
           <div className="h-96 bg-slate-900/20 rounded-2xl border border-slate-900/80"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // Connection Error State
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white transition-colors group"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="group-hover:-translate-x-1 transition-transform"
+          >
+            <line x1="19" y1="12" x2="5" y2="12" />
+            <polyline points="12 19 5 12 12 5" />
+          </svg>
+          Back to Directory
+        </Link>
+
+        <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-12 text-center text-red-400 backdrop-blur-sm">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="48"
+            height="48"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="mx-auto text-red-500 mb-4 animate-pulse"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <h3 className="text-lg font-bold text-white mb-1">Server Connection Error</h3>
+          <p className="text-sm text-red-300/80 max-w-md mx-auto">{error}. Please make sure the local inventory API backend service is running and accessible.</p>
         </div>
       </div>
     );

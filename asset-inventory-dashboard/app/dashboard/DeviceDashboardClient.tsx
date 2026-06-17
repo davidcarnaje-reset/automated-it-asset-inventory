@@ -8,6 +8,7 @@ export default function DeviceDashboardClient() {
   const router = useRouter();
   const [computers, setComputers] = useState<Computer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "online" | "offline">("all");
   const [isPending, startTransition] = useTransition();
@@ -22,10 +23,12 @@ export default function DeviceDashboardClient() {
         "http://localhost:5067/api/inventory",
       ];
 
+      let success = false;
+
       for (const url of endpoints) {
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 2000);
+          const timeoutId = setTimeout(() => controller.abort(), 10000);
 
           const res = await fetch(url, { signal: controller.signal });
           clearTimeout(timeoutId);
@@ -36,7 +39,9 @@ export default function DeviceDashboardClient() {
             if (Array.isArray(list)) {
               if (active) {
                 setComputers(list.map(normalizeComputer));
+                setError(null);
                 setIsLoading(false);
+                success = true;
                 return;
               }
             }
@@ -46,9 +51,10 @@ export default function DeviceDashboardClient() {
         }
       }
 
-      // If connection fails, set computers to an empty list and show No Devices Found
-      if (active) {
+      // If connection fails, set computers to an empty list and show error
+      if (active && !success) {
         setComputers([]);
+        setError("Could not reach server");
         setIsLoading(false);
       }
     }
@@ -130,6 +136,31 @@ export default function DeviceDashboardClient() {
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-4 text-red-400 flex items-center gap-3 backdrop-blur-sm">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-red-400 shrink-0"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <div className="flex-1">
+            <h4 className="text-sm font-semibold text-white">Connection Error</h4>
+            <p className="text-xs text-red-300/80 mt-0.5">{error}. Retrying automatically...</p>
+          </div>
+        </div>
+      )}
+
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {/* Metric: Total Devices */}
