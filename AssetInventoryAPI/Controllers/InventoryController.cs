@@ -124,15 +124,21 @@ public class InventoryController : ControllerBase
 
     // GET: api/inventory/5
     [HttpGet("{id}")]
-    public async Task<ActionResult<Computer>> GetInventoryItem(int id)
+    [EnableCors("AllowNextjsFrontend")]
+    public async Task<ActionResult<Computer>> GetInventoryItem(string id)
     {
+        if (!int.TryParse(id, out int numericId))
+        {
+            return NotFound(new { Message = $"Computer with ID {id} not found." });
+        }
+
         var computer = await _context.Computers
             .Include(c => c.Peripherals)
-            .FirstOrDefaultAsync(c => c.Id == id);
+            .FirstOrDefaultAsync(c => c.Id == numericId);
 
         if (computer == null)
         {
-            return NotFound(new { Message = $"Computer with ID {id} not found." });
+            return NotFound(new { Message = $"Computer with ID {numericId} not found." });
         }
 
         return Ok(computer);
