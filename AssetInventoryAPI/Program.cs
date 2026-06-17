@@ -286,8 +286,8 @@ public class DashboardForm : Form
     {
         var builder = WebApplication.CreateBuilder(_args);
 
-        // Bind Kestrel to listen on port 5067
-        builder.WebHost.UseUrls("http://localhost:5067");
+        // Bind Kestrel to listen on port 5067 on all network interfaces
+        builder.WebHost.UseUrls("http://0.0.0.0:5067");
 
         builder.Services.AddOpenApi();
         builder.Services.AddControllers();
